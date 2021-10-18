@@ -10,6 +10,7 @@ import androidx.core.app.NotificationManagerCompat;
 
 import com.dexterous.flutterlocalnotifications.models.NotificationDetails;
 import com.dexterous.flutterlocalnotifications.utils.StringUtils;
+import com.dexterous.flutterlocalnotifications.utils.Util;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -43,6 +44,8 @@ public class ScheduledNotificationReceiver extends BroadcastReceiver {
             Type type = new TypeToken<NotificationDetails>() {
             }.getType();
             NotificationDetails notificationDetails = gson.fromJson(notificationDetailsJson, type);
+            notificationDetails.appState = Util.getAppState();
+
             FlutterLocalNotificationsPlugin.showNotification(context, notificationDetails);
             if (notificationDetails.scheduledNotificationRepeatFrequency != null) {
                 FlutterLocalNotificationsPlugin.zonedScheduleNextNotification(context, notificationDetails);
