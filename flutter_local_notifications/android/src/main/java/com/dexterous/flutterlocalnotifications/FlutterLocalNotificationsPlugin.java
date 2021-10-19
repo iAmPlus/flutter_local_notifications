@@ -172,9 +172,8 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
             setupNotificationChannel(context, notificationChannelDetails);
         }
 
-        Payload payload = PayLoad(notificationDetails.payload,notificationDetails.appState);
-        Gson gson = new Gson();
-        String updatedPayload = gson.toJson(Payload.class).toString();
+        PayLoad payload = new PayLoad(notificationDetails.payload,notificationDetails.appState);
+        String updatedPayload = gson.toJson(payload).toString();
 
 
         Intent intent = getLaunchIntent(context);
