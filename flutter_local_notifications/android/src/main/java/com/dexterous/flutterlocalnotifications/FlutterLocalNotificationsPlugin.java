@@ -40,6 +40,7 @@ import com.dexterous.flutterlocalnotifications.models.NotificationChannelAction;
 import com.dexterous.flutterlocalnotifications.models.NotificationChannelDetails;
 import com.dexterous.flutterlocalnotifications.models.NotificationChannelGroupDetails;
 import com.dexterous.flutterlocalnotifications.models.NotificationDetails;
+import com.dexterous.flutterlocalnotifications.models.PayLoad;
 import com.dexterous.flutterlocalnotifications.models.PersonDetails;
 import com.dexterous.flutterlocalnotifications.models.ScheduledNotificationRepeatFrequency;
 import com.dexterous.flutterlocalnotifications.models.SoundSource;
@@ -170,9 +171,14 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
         if(canCreateNotificationChannel(context, notificationChannelDetails)) {
             setupNotificationChannel(context, notificationChannelDetails);
         }
+
+        PayLoad payload = new PayLoad(notificationDetails.payload,notificationDetails.appState);
+        String updatedPayload = gson.toJson(payload).toString();
+
+
         Intent intent = getLaunchIntent(context);
         intent.setAction(SELECT_NOTIFICATION);
-        intent.putExtra(PAYLOAD, notificationDetails.payload);
+        intent.putExtra(PAYLOAD, updatedPayload);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (VERSION.SDK_INT >= VERSION_CODES.M) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
