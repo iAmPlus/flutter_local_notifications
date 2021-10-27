@@ -1,5 +1,14 @@
 #import "FlutterLocalNotificationsPlugin.h"
 
+#if __has_include(<flutter_local_notifications/flutter_local_notifications-Swift.h>)
+#import <flutter_local_notifications/flutter_local_notifications-Swift.h>
+#else
+// Support project import fallback if the generated compatibility header
+// is not copied when this plugin is created as a library.
+// https://forums.swift.org/t/swift-static-libraries-dont-copy-generated-objective-c-header/19816
+#import "flutter_local_notifications-Swift.h"
+#endif
+
 @implementation FlutterLocalNotificationsPlugin{
     FlutterMethodChannel* _channel;
     bool _displayAlert;
@@ -28,6 +37,7 @@ NSString *const CHANNEL = @"dexterous.com/flutter/local_notifications";
 NSString *const CALLBACK_CHANNEL = @"dexterous.com/flutter/local_notifications_background";
 NSString *const ON_NOTIFICATION_METHOD = @"onNotification";
 NSString *const DID_RECEIVE_LOCAL_NOTIFICATION = @"didReceiveLocalNotification";
+NSString *const DID_RECEIVE_LOCAL_NOTIFICATION_IN_FORGROUND = @"didReceiveLocalNotificationInForground";
 NSString *const REQUEST_PERMISSIONS_METHOD = @"requestPermissions";
 
 NSString *const DAY = @"day";
@@ -106,6 +116,9 @@ static FlutterError *getFlutterError(NSError *error) {
     FlutterLocalNotificationsPlugin* instance = [[FlutterLocalNotificationsPlugin alloc] initWithChannel:channel registrar:registrar];
     [registrar addApplicationDelegate:instance];
     [registrar addMethodCallDelegate:instance channel:channel];
+
+    //Register Swift Notification Plugin
+    [SwiftNotificationManagerPlugin registerWithRegistrar:registrar];
 }
 
 - (instancetype)initWithChannel:(FlutterMethodChannel *)channel registrar:(NSObject<FlutterPluginRegistrar> *)registrar {
@@ -735,6 +748,8 @@ static FlutterError *getFlutterError(NSError *error) {
     if(presentBadge) {
         presentationOptions |= UNNotificationPresentationOptionBadge;
     }
+    
+    NSLog(@"%@", @"willPresentNotification");
     completionHandler(presentationOptions);
 }
 
@@ -769,9 +784,12 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 
 - (void)application:(UIApplication*)application
 didReceiveLocalNotification:(UILocalNotification*)notification {
+    NSLog(@"didReceiveLocalNotification");
+
     if(@available(iOS 10.0, *)) {
         return;
     }
+
     if(![self isAFlutterLocalNotification:notification.userInfo]) {
         return;
     }
@@ -787,6 +805,7 @@ didReceiveLocalNotification:(UILocalNotification*)notification {
     if (notification.userInfo[PAYLOAD] != [NSNull null]) {
         arguments[PAYLOAD] =notification.userInfo[PAYLOAD];
     }
+
     [_channel invokeMethod:DID_RECEIVE_LOCAL_NOTIFICATION arguments:arguments];
 }
 
