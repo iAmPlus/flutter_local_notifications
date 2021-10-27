@@ -52,6 +52,9 @@ import com.dexterous.flutterlocalnotifications.models.styles.MessagingStyleInfor
 import com.dexterous.flutterlocalnotifications.models.styles.StyleInformation;
 import com.dexterous.flutterlocalnotifications.utils.BooleanUtils;
 import com.dexterous.flutterlocalnotifications.utils.StringUtils;
+import com.dexterous.flutterlocalnotifications.MainThreadEventSink;
+
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -83,12 +86,14 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
+import io.flutter.plugin.common.EventChannel.EventSink;
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 
 /**
  * FlutterLocalNotificationsPlugin
  */
 @Keep
-public class FlutterLocalNotificationsPlugin implements MethodCallHandler, PluginRegistry.NewIntentListener, FlutterPlugin, ActivityAware {
+public class FlutterLocalNotificationsPlugin implements MethodCallHandler, PluginRegistry.NewIntentListener, FlutterPlugin, ActivityAware,EventChannel.StreamHandler {
     private static final String SHARED_PREFERENCES_KEY = "notification_plugin_cache";
     private static final String DRAWABLE = "drawable";
     private static final String DEFAULT_ICON = "defaultIcon";
@@ -135,6 +140,11 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     private Context applicationContext;
     private Activity mainActivity;
     private Intent launchIntent;
+    EventSink eventSink = null;
+    private val EVENT_CHANNEL = "alarm_listener";
+    public EventChannel eventChannel = null;
+
+
 
     @SuppressWarnings("deprecation")
     public static void registerWith(io.flutter.plugin.common.PluginRegistry.Registrar registrar) {
@@ -819,6 +829,8 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
             notificationManager.createNotificationChannel(notificationChannel);
 
         }
+
+
     }
 
     private static Uri retrieveSoundResourceUri(Context context, String sound, SoundSource soundSource) {
@@ -981,6 +993,9 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
         this.applicationContext = context;
         this.channel = new MethodChannel(binaryMessenger, METHOD_CHANNEL);
         this.channel.setMethodCallHandler(this);
+        eventChannel = EventChannel(binaryMessenger, EVENT_CHANNEL);
+        eventChannel.setStreamHandler(this);
+
     }
 
     @Override
@@ -1277,10 +1292,20 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     }
 
     @Override
+    void onListen(Object arguments, EventSink events){
+
+        eventSink = new MainThreadEventSink(events);
+        (eventSink instanceof MainThreadEventSink).success("data of notificaiton");
+
+    }
+
+    @Override
     public boolean onNewIntent(Intent intent) {
         boolean res = sendNotificationPayloadMessage(intent);
         if (res && mainActivity != null) {
+
             mainActivity.setIntent(intent);
+
         }
         return res;
     }
@@ -1288,6 +1313,7 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     private Boolean sendNotificationPayloadMessage(Intent intent) {
         if (SELECT_NOTIFICATION.equals(intent.getAction())) {
             String payload = intent.getStringExtra(PAYLOAD);
+            eventSink.success(payload);
             channel.invokeMethod("selectNotification", payload);
             return true;
         }
