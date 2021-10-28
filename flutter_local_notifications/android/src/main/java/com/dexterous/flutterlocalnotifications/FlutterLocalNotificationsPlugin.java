@@ -52,7 +52,6 @@ import com.dexterous.flutterlocalnotifications.models.styles.MessagingStyleInfor
 import com.dexterous.flutterlocalnotifications.models.styles.StyleInformation;
 import com.dexterous.flutterlocalnotifications.utils.BooleanUtils;
 import com.dexterous.flutterlocalnotifications.utils.StringUtils;
-import com.dexterous.flutterlocalnotifications.MainThreadEventSink;
 
 
 import com.google.gson.Gson;
@@ -89,11 +88,28 @@ import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import io.flutter.plugin.common.EventChannel;
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.plugin.common.BinaryMessenger;
+
+import io.flutter.plugin.common.MethodChannel;
+
+
+
 /**
  * FlutterLocalNotificationsPlugin
  */
 @Keep
-public class FlutterLocalNotificationsPlugin implements MethodCallHandler, PluginRegistry.NewIntentListener, FlutterPlugin, ActivityAware,EventChannel.StreamHandler {
+public class FlutterLocalNotificationsPlugin implements MethodCallHandler, PluginRegistry.NewIntentListener, FlutterPlugin, ActivityAware, EventChannel.StreamHandler {
     private static final String SHARED_PREFERENCES_KEY = "notification_plugin_cache";
     private static final String DRAWABLE = "drawable";
     private static final String DEFAULT_ICON = "defaultIcon";
@@ -140,9 +156,12 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     private Context applicationContext;
     private Activity mainActivity;
     private Intent launchIntent;
-    EventSink eventSink = null;
-    private val EVENT_CHANNEL = "alarm_listener";
+    private String EVENT_CHANNEL = "notification_listener";
+
     public EventChannel eventChannel = null;
+    public static EventChannel.EventSink eventSink;
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
+
 
 
 
@@ -993,9 +1012,23 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
         this.applicationContext = context;
         this.channel = new MethodChannel(binaryMessenger, METHOD_CHANNEL);
         this.channel.setMethodCallHandler(this);
-        eventChannel = EventChannel(binaryMessenger, EVENT_CHANNEL);
+        eventChannel = new EventChannel(binaryMessenger, EVENT_CHANNEL);
         eventChannel.setStreamHandler(this);
 
+//        eventChannel.setMethodCallHandler(this);
+//        eventChannel = EventChannel(binaryMessenger, EVENT_CHANNEL);
+//        eventChannel.setStreamHandler(new StreamHandler() {
+//
+//            @Override
+//            public void onListen(Object arguments, EventSink eventSink) {
+//
+//            }
+//
+//            @Override
+//            public void onCancel(Object args) {
+//
+//            }
+//        });
     }
 
     @Override
@@ -1292,14 +1325,6 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     }
 
     @Override
-    void onListen(Object arguments, EventSink events){
-
-        eventSink = new MainThreadEventSink(events);
-        (eventSink instanceof MainThreadEventSink).success("data of notificaiton");
-
-    }
-
-    @Override
     public boolean onNewIntent(Intent intent) {
         boolean res = sendNotificationPayloadMessage(intent);
         if (res && mainActivity != null) {
@@ -1467,4 +1492,16 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
         applicationContext.stopService(new Intent(applicationContext, ForegroundService.class));
         result.success(null);
     }
+
+    @Override
+    public void onListen(Object arguments, EventChannel.EventSink events) {
+        this.eventSink = events;
+    }
+
+    @Override
+    public void onCancel(Object arguments) {
+
+    }
+
 }
+
