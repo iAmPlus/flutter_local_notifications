@@ -10,6 +10,8 @@ import 'notification_details.dart';
 import 'platform_flutter_local_notifications.dart';
 import 'platform_specifics/ios/enums.dart';
 import 'types.dart';
+import 'package:flutter/services.dart';
+
 
 /// Provides cross-platform functionality for displaying local notifications.
 ///
@@ -20,10 +22,22 @@ import 'types.dart';
 /// Use [resolvePlatformSpecificImplementation] and pass the platform-specific
 /// type of the plugin to get the underlying platform-specific implementation
 /// if access to platform-specific APIs are needed.
+/// const _connectedStream = EventChannel('alarm_listener');
+///
+const _connectedStream = EventChannel('notification_listener');
+
+typedef NotificationTriggerListener = void Function(dynamic msg);
+
+
 class FlutterLocalNotificationsPlugin {
   /// Factory for create an instance of [FlutterLocalNotificationsPlugin].
   factory FlutterLocalNotificationsPlugin() => _instance;
-
+  static void onAlarmTriggerSubscription(
+      NotificationTriggerListener alarmTriggerListener) {
+    _connectedStream
+        .receiveBroadcastStream('lister')
+        .listen(alarmTriggerListener);
+  }
   FlutterLocalNotificationsPlugin._() {
     if (kIsWeb) {
       return;
