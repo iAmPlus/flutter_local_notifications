@@ -11,6 +11,8 @@
     NSObject<FlutterPluginRegistrar> *_registrar;
     NSString *_launchPayload;
     UILocalNotification *_launchNotification;
+    FlutterEventSink _eventSink;
+   
 }
 
 NSString *const INITIALIZE_METHOD = @"initialize";
@@ -71,6 +73,9 @@ NSString *const UILOCALNOTIFICATION_DATE_INTERPRETATION = @"uiLocalNotificationD
 NSString *const NOTIFICATION_ID = @"NotificationId";
 NSString *const PAYLOAD = @"payload";
 NSString *const NOTIFICATION_LAUNCHED_APP = @"notificationLaunchedApp";
+NSString *const EVENT_CHANNEL = @"notification_listener";
+
+ 
 
 
 typedef NS_ENUM(NSInteger, RepeatInterval) {
@@ -102,6 +107,10 @@ static FlutterError *getFlutterError(NSError *error) {
     FlutterMethodChannel *channel = [FlutterMethodChannel
                                      methodChannelWithName:CHANNEL
                                      binaryMessenger:[registrar messenger]];
+    
+    FlutterEventChannel *eventChannel = [FlutterEventChannel                 eventChannelWithName: EVENT_CHANNEL binaryMessenger:[registrar messenger]];
+    
+    [eventChannel setStreamHandler:[registrar messenger]];
     
     FlutterLocalNotificationsPlugin* instance = [[FlutterLocalNotificationsPlugin alloc] initWithChannel:channel registrar:registrar];
     [registrar addApplicationDelegate:instance];
@@ -703,16 +712,31 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 - (BOOL)isAFlutterLocalNotification:(NSDictionary *)userInfo {
+    _eventSink(userInfo);
     return userInfo != nil && userInfo[NOTIFICATION_ID] && userInfo[PRESENT_ALERT] && userInfo[PRESENT_SOUND] && userInfo[PRESENT_BADGE] && userInfo[PAYLOAD];
 }
 
 - (void)handleSelectNotification:(NSString *)payload {
+    _eventSink(payload);
     [_channel invokeMethod:@"selectNotification" arguments:payload];
+    
 }
 
 - (BOOL)containsKey:(NSString *)key forDictionary:(NSDictionary *)dictionary{
     return dictionary[key] != [NSNull null] && dictionary[key] != nil;
 }
+
+
+- (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)events{
+    _eventSink = events;
+    return nil;
+}
+
+- (FlutterError *)onCancelWithArguments:(id)arguments{
+    _eventSink = nil;
+    return nil;
+}
+
 
 #pragma mark - UNUserNotificationCenterDelegate
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification :(UNNotification *)notification withCompletionHandler :(void (^)(UNNotificationPresentationOptions))completionHandler NS_AVAILABLE_IOS(10.0) {
@@ -789,5 +813,6 @@ didReceiveLocalNotification:(UILocalNotification*)notification {
     }
     [_channel invokeMethod:DID_RECEIVE_LOCAL_NOTIFICATION arguments:arguments];
 }
+
 
 @end
