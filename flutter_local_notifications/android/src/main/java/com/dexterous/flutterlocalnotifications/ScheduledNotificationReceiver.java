@@ -37,12 +37,7 @@ public class ScheduledNotificationReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        if(!Util.foregrounded()){
-            Intent appIntent = context.getPackageManager().getLaunchIntentForPackage("com.iamplus.mafplus");
-            appIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            context.startActivity(appIntent);
-        }
-
+       
         String notificationDetailsJson = intent.getStringExtra(FlutterLocalNotificationsPlugin.NOTIFICATION_DETAILS);
         if (StringUtils.isNullOrEmpty(notificationDetailsJson)) {
             // This logic is needed for apps that used the plugin prior to 0.3.4
@@ -65,8 +60,12 @@ public class ScheduledNotificationReceiver extends BroadcastReceiver {
             // FlutterLocalNotificationsPlugin.eventSink.success("Gson().toJson(payload)");
             PayLoad payload = new PayLoad(notificationDetails.payload,notificationDetails.appState);
             String updatedPayload = gson.toJson(payload).toString();
-
-
+            
+            if(!Util.foregrounded()){
+                Intent appIntent = context.getPackageManager().getLaunchIntentForPackage("com.iamplus.mafplus");
+                appIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                context.startActivity(appIntent);
+             }
 
             sendEvent(updatedPayload);
 
