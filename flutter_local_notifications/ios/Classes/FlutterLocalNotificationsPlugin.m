@@ -116,7 +116,7 @@ static FlutterError *getFlutterError(NSError *error) {
     
     FlutterLocalNotificationsPlugin* instance = [[FlutterLocalNotificationsPlugin alloc] initWithChannel:channel registrar:registrar];
     
-    [eventChannel setStreamHandler: [FlutterLocalNotificationsPlugin ]];
+    [eventChannel setStreamHandler: [FlutterLocalNotificationsPlugin sharedInstance]];
     [registrar addApplicationDelegate:instance];
     [registrar addMethodCallDelegate:instance channel:channel];
    
