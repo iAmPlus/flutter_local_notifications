@@ -34,6 +34,7 @@ class FlutterLocalNotificationsPlugin {
   factory FlutterLocalNotificationsPlugin() => _instance;
   static void onAlarmTriggerSubscription(
       NotificationTriggerListener alarmTriggerListener) {
+    print('event channel called = $_connectedStream $alarmTriggerListener');
     _connectedStream
         .receiveBroadcastStream('lister')
         .listen(alarmTriggerListener);

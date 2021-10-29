@@ -1,6 +1,8 @@
 #import "FlutterLocalNotificationsPlugin.h"
 
-@implementation FlutterLocalNotificationsPlugin{
+
+@implementation FlutterLocalNotificationsPlugin
+{
     FlutterMethodChannel* _channel;
     bool _displayAlert;
     bool _playSound;
@@ -11,7 +13,7 @@
     NSObject<FlutterPluginRegistrar> *_registrar;
     NSString *_launchPayload;
     UILocalNotification *_launchNotification;
-    FlutterEventSink _eventSink;
+   
    
 }
 
@@ -104,17 +106,41 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
+    
+    
     FlutterMethodChannel *channel = [FlutterMethodChannel
                                      methodChannelWithName:CHANNEL
                                      binaryMessenger:[registrar messenger]];
     
-    FlutterEventChannel *eventChannel = [FlutterEventChannel                 eventChannelWithName: EVENT_CHANNEL binaryMessenger:[registrar messenger]];
-    
-    [eventChannel setStreamHandler:[registrar messenger]];
+    FlutterEventChannel *eventChannel = [FlutterEventChannel eventChannelWithName:EVENT_CHANNEL binaryMessenger:[registrar messenger]];
     
     FlutterLocalNotificationsPlugin* instance = [[FlutterLocalNotificationsPlugin alloc] initWithChannel:channel registrar:registrar];
+    
+    [eventChannel setStreamHandler: [FlutterLocalNotificationsPlugin ]];
     [registrar addApplicationDelegate:instance];
     [registrar addMethodCallDelegate:instance channel:channel];
+   
+   
+    
+}
+
+
+- (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)events{
+    _eventSink = events;
+    return nil;
+}
+
+- (FlutterError *)onCancelWithArguments:(id)arguments{
+    return nil;
+}
+
++ (instancetype)sharedInstance
+{
+    static FlutterLocalNotificationsPlugin *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+        sharedInstance = [[FlutterLocalNotificationsPlugin alloc] init];
+    
+    return sharedInstance;
 }
 
 - (instancetype)initWithChannel:(FlutterMethodChannel *)channel registrar:(NSObject<FlutterPluginRegistrar> *)registrar {
@@ -712,12 +738,12 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 - (BOOL)isAFlutterLocalNotification:(NSDictionary *)userInfo {
-    _eventSink(userInfo);
+
     return userInfo != nil && userInfo[NOTIFICATION_ID] && userInfo[PRESENT_ALERT] && userInfo[PRESENT_SOUND] && userInfo[PRESENT_BADGE] && userInfo[PAYLOAD];
 }
 
 - (void)handleSelectNotification:(NSString *)payload {
-    _eventSink(payload);
+   
     [_channel invokeMethod:@"selectNotification" arguments:payload];
     
 }
@@ -727,15 +753,6 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 
-- (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)events{
-    _eventSink = events;
-    return nil;
-}
-
-- (FlutterError *)onCancelWithArguments:(id)arguments{
-    _eventSink = nil;
-    return nil;
-}
 
 
 #pragma mark - UNUserNotificationCenterDelegate
@@ -743,6 +760,13 @@ static FlutterError *getFlutterError(NSError *error) {
     if(![self isAFlutterLocalNotification:notification.request.content.userInfo]) {
         return;
     }
+    
+    NSError *e = nil;
+    NSData *dataobject = [NSJSONSerialization dataWithJSONObject:notification.request.content.userInfo options:NSJSONWritingPrettyPrinted error:&e];
+    NSString* sinkDataString = [[NSString alloc] initWithData:dataobject encoding:NSUTF8StringEncoding];
+    _eventSink(sinkDataString);
+    
+    
     UNNotificationPresentationOptions presentationOptions = 0;
     NSNumber *presentAlertValue = (NSNumber*)notification.request.content.userInfo[PRESENT_ALERT];
     NSNumber *presentSoundValue = (NSNumber*)notification.request.content.userInfo[PRESENT_SOUND];
