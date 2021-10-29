@@ -13,9 +13,9 @@
     NSObject<FlutterPluginRegistrar> *_registrar;
     NSString *_launchPayload;
     UILocalNotification *_launchNotification;
-   
-   
 }
+
+static FlutterEventSink _eventSink;
 
 NSString *const INITIALIZE_METHOD = @"initialize";
 NSString *const SHOW_METHOD = @"show";
@@ -77,8 +77,6 @@ NSString *const PAYLOAD = @"payload";
 NSString *const NOTIFICATION_LAUNCHED_APP = @"notificationLaunchedApp";
 NSString *const EVENT_CHANNEL = @"notification_listener";
 
- 
-
 
 typedef NS_ENUM(NSInteger, RepeatInterval) {
     EveryMinute,
@@ -106,52 +104,39 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-    
-    
+
     FlutterMethodChannel *channel = [FlutterMethodChannel
                                      methodChannelWithName:CHANNEL
                                      binaryMessenger:[registrar messenger]];
-    
-    FlutterEventChannel *eventChannel = [FlutterEventChannel eventChannelWithName:EVENT_CHANNEL binaryMessenger:[registrar messenger]];
-    
+
     FlutterLocalNotificationsPlugin* instance = [[FlutterLocalNotificationsPlugin alloc] initWithChannel:channel registrar:registrar];
-    
-    [eventChannel setStreamHandler: [FlutterLocalNotificationsPlugin sharedInstance]];
     [registrar addApplicationDelegate:instance];
     [registrar addMethodCallDelegate:instance channel:channel];
-   
-   
-    
+
+    FlutterEventChannel *eventChannel = [FlutterEventChannel eventChannelWithName:EVENT_CHANNEL binaryMessenger:[registrar messenger]];
+    [eventChannel setStreamHandler: instance];
 }
 
+//--- Flutter Channel Delegate Methods
+- (FlutterError * _Nullable)onCancelWithArguments:(id _Nullable)arguments {
+    _eventSink = nil;
+    return nil;
+}
 
-- (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)events{
+- (FlutterError * _Nullable)onListenWithArguments:(id _Nullable)arguments eventSink:(nonnull FlutterEventSink)events {
     _eventSink = events;
     return nil;
 }
 
-- (FlutterError *)onCancelWithArguments:(id)arguments{
-    return nil;
-}
-
-+ (instancetype)sharedInstance
-{
-    static FlutterLocalNotificationsPlugin *sharedInstance = nil;
-    static dispatch_once_t onceToken;
-        sharedInstance = [[FlutterLocalNotificationsPlugin alloc] init];
-    
-    return sharedInstance;
-}
-
 - (instancetype)initWithChannel:(FlutterMethodChannel *)channel registrar:(NSObject<FlutterPluginRegistrar> *)registrar {
     self = [super init];
-    
+
     if (self) {
         _channel = channel;
         _registrar = registrar;
         _persistentState = [NSUserDefaults standardUserDefaults];
     }
-    
+
     return self;
 }
 
@@ -266,7 +251,7 @@ static FlutterError *getFlutterError(NSError *error) {
         requestedBadgePermission = [arguments[REQUEST_BADGE_PERMISSION] boolValue];
     }
     [self requestPermissionsImpl:requestedSoundPermission alertPermission:requestedAlertPermission badgePermission:requestedBadgePermission  result:result];
-    
+
     _initialized = true;
 }
 
@@ -296,7 +281,7 @@ static FlutterError *getFlutterError(NSError *error) {
     }
     if(@available(iOS 10.0, *)) {
         UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-        
+
         UNAuthorizationOptions authorizationOptions = 0;
         if (soundPermission) {
             authorizationOptions += UNAuthorizationOptionSound;
@@ -332,7 +317,7 @@ static FlutterError *getFlutterError(NSError *error) {
     if([self containsKey:BODY forDictionary:arguments]) {
         notification.alertBody = arguments[BODY];
     }
-    
+
     NSString *title;
     if([self containsKey:TITLE forDictionary:arguments]) {
         title = arguments[TITLE];
@@ -340,13 +325,13 @@ static FlutterError *getFlutterError(NSError *error) {
             notification.alertTitle = title;
         }
     }
-    
+
     bool presentAlert = _displayAlert;
     bool presentSound = _playSound;
     bool presentBadge = _updateBadge;
     if(arguments[PLATFORM_SPECIFICS] != [NSNull null]) {
         NSDictionary *platformSpecifics = arguments[PLATFORM_SPECIFICS];
-        
+
         if([self containsKey:PRESENT_ALERT forDictionary:platformSpecifics]) {
             presentAlert = [[platformSpecifics objectForKey:PRESENT_ALERT] boolValue];
         }
@@ -356,20 +341,20 @@ static FlutterError *getFlutterError(NSError *error) {
         if([self containsKey:PRESENT_BADGE forDictionary:platformSpecifics]) {
             presentBadge = [[platformSpecifics objectForKey:PRESENT_BADGE] boolValue];
         }
-        
+
         if([self containsKey:BADGE_NUMBER forDictionary:platformSpecifics]) {
             notification.applicationIconBadgeNumber = [platformSpecifics[BADGE_NUMBER] integerValue];
         }
-        
+
         if([self containsKey:SOUND forDictionary:platformSpecifics]) {
             notification.soundName = [platformSpecifics[SOUND] stringValue];
         }
     }
-    
+
     if(presentSound && notification.soundName == nil) {
         notification.soundName = UILocalNotificationDefaultSoundName;
     }
-    
+
     notification.userInfo = [self buildUserDict:arguments[ID] title:title presentAlert:presentAlert presentSound:presentSound presentBadge:presentBadge payload:arguments[PAYLOAD]];
     return notification;
 }
@@ -394,7 +379,7 @@ static FlutterError *getFlutterError(NSError *error) {
         UNMutableNotificationContent *content = [self buildStandardNotificationContent:arguments result:result];
         UNCalendarNotificationTrigger *trigger = [self buildUserNotificationCalendarTrigger:arguments];
         [self addNotificationRequest:[self getIdentifier:arguments] content:content result:result trigger:trigger];
-        
+
     } else {
         UILocalNotification * notification = [self buildStandardUILocalNotification:arguments];
         NSString *scheduledDateTime  = arguments[SCHEDULED_DATE_TIME];
@@ -635,21 +620,21 @@ static FlutterError *getFlutterError(NSError *error) {
 - (UNCalendarNotificationTrigger *) buildUserNotificationCalendarTrigger:(id) arguments NS_AVAILABLE_IOS(10.0) {
     NSString *scheduledDateTime  = arguments[SCHEDULED_DATE_TIME];
     NSString *timeZoneName = arguments[TIME_ZONE_NAME];
-    
+
     NSNumber *matchDateComponents = arguments[MATCH_DATE_TIME_COMPONENTS];
     NSCalendar *calendar = [NSCalendar currentCalendar];
     NSTimeZone *timezone = [NSTimeZone timeZoneWithName:timeZoneName];
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-    
+
     // Needed for some countries, when phone DateTime format is 12H
     NSLocale *posix = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
-    
+
     [dateFormatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss"];
     [dateFormatter setTimeZone:timezone];
     [dateFormatter setLocale:posix];
-    
+
     NSDate *date = [dateFormatter dateFromString:scheduledDateTime];
-    
+
     calendar.timeZone = timezone;
     if(matchDateComponents != nil) {
         if([matchDateComponents integerValue] == Time) {
@@ -658,7 +643,7 @@ static FlutterError *getFlutterError(NSError *error) {
                                                                         NSCalendarUnitMinute|
                                                                         NSCalendarUnitSecond | NSCalendarUnitTimeZone) fromDate:date];
             return [UNCalendarNotificationTrigger triggerWithDateMatchingComponents:dateComponents repeats:YES];
-            
+
         } else if([matchDateComponents integerValue] == DayOfWeekAndTime) {
             NSDateComponents *dateComponents    = [calendar components:( NSCalendarUnitWeekday |
                                                                         NSCalendarUnitHour  |
@@ -743,30 +728,25 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 - (void)handleSelectNotification:(NSString *)payload {
-   
+
     [_channel invokeMethod:@"selectNotification" arguments:payload];
-    
+
 }
 
 - (BOOL)containsKey:(NSString *)key forDictionary:(NSDictionary *)dictionary{
     return dictionary[key] != [NSNull null] && dictionary[key] != nil;
 }
 
-
-
-
 #pragma mark - UNUserNotificationCenterDelegate
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification :(UNNotification *)notification withCompletionHandler :(void (^)(UNNotificationPresentationOptions))completionHandler NS_AVAILABLE_IOS(10.0) {
     if(![self isAFlutterLocalNotification:notification.request.content.userInfo]) {
         return;
     }
-    
-    NSError *e = nil;
-    NSData *dataobject = [NSJSONSerialization dataWithJSONObject:notification.request.content.userInfo options:NSJSONWritingPrettyPrinted error:&e];
-    NSString* sinkDataString = [[NSString alloc] initWithData:dataobject encoding:NSUTF8StringEncoding];
-    _eventSink(sinkDataString);
-    
-    
+
+    NSString *modifiedPayload = [self prepareStringFromNotificationPayload:nil andUserInfo:notification.request.content.userInfo];
+    NSLog(@"modifiedPayload - %@", modifiedPayload);
+    _eventSink(modifiedPayload);
+
     UNNotificationPresentationOptions presentationOptions = 0;
     NSNumber *presentAlertValue = (NSNumber*)notification.request.content.userInfo[PRESENT_ALERT];
     NSNumber *presentSoundValue = (NSNumber*)notification.request.content.userInfo[PRESENT_SOUND];
@@ -790,6 +770,11 @@ static FlutterError *getFlutterError(NSError *error) {
 didReceiveNotificationResponse:(UNNotificationResponse *)response
          withCompletionHandler:(void (^)(void))completionHandler NS_AVAILABLE_IOS(10.0) {
     if ([response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier] && [self isAFlutterLocalNotification:response.notification.request.content.userInfo]) {
+
+        NSString *modifiedPayload = [self prepareStringFromNotificationPayload:response andUserInfo:response.notification.request.content.userInfo];
+        NSLog(@"modifiedPayload - %@", modifiedPayload);
+        _eventSink(modifiedPayload);
+
         NSString *payload = (NSString *) response.notification.request.content.userInfo[PAYLOAD];
         if(_initialized) {
             [self handleSelectNotification:payload];
@@ -811,7 +796,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
             _launchNotification = launchNotification;
         }
     }
-    
+
     return YES;
 }
 
@@ -823,7 +808,7 @@ didReceiveLocalNotification:(UILocalNotification*)notification {
     if(![self isAFlutterLocalNotification:notification.userInfo]) {
         return;
     }
-    
+
     NSMutableDictionary *arguments = [[NSMutableDictionary alloc] init];
     arguments[ID]= notification.userInfo[NOTIFICATION_ID];
     if (notification.userInfo[TITLE] != [NSNull null]) {
@@ -836,6 +821,29 @@ didReceiveLocalNotification:(UILocalNotification*)notification {
         arguments[PAYLOAD] =notification.userInfo[PAYLOAD];
     }
     [_channel invokeMethod:DID_RECEIVE_LOCAL_NOTIFICATION arguments:arguments];
+}
+
+// This method will inject the appstate whether it is foreground or in backgound
+- (NSString *) prepareStringFromNotificationPayload: (nullable UNNotificationResponse *) response andUserInfo:(NSDictionary *)userInfo {
+
+    NSMutableDictionary *updatedPayload = [NSMutableDictionary new];
+
+    if (response == nil) {
+        updatedPayload[@"appState"] = @"foreground";
+    } else {
+        updatedPayload[@"appState"] = @"notificaiotn_click_or_by_app_launch";
+    }
+
+    if ( userInfo && userInfo[@"payload"] ) {
+        updatedPayload[@"data"] = userInfo[@"payload"];
+    } else {
+        updatedPayload[@"data"] = userInfo;
+    }
+
+    NSError * err;
+    NSData * jsonData = [NSJSONSerialization  dataWithJSONObject:updatedPayload options:0 error:&err];
+    NSString * myString = [[NSString alloc] initWithData:jsonData   encoding:NSUTF8StringEncoding];
+    return err == nil ? myString : @"";
 }
 
 
