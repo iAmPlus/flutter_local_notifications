@@ -745,7 +745,11 @@ static FlutterError *getFlutterError(NSError *error) {
 
     NSString *modifiedPayload = [self prepareStringFromNotificationPayload:nil andUserInfo:notification.request.content.userInfo];
     NSLog(@"modifiedPayload - %@", modifiedPayload);
-    _eventSink(modifiedPayload);
+    if ((_eventSink != NULL) || (_eventSink != nil)){
+        _eventSink(modifiedPayload);
+    }
+
+   
 
     UNNotificationPresentationOptions presentationOptions = 0;
     NSNumber *presentAlertValue = (NSNumber*)notification.request.content.userInfo[PRESENT_ALERT];
@@ -763,7 +767,7 @@ static FlutterError *getFlutterError(NSError *error) {
     if(presentBadge) {
         presentationOptions |= UNNotificationPresentationOptionBadge;
     }
-    completionHandler(presentationOptions);
+//    completionHandler(presentationOptions);
 }
 
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
@@ -773,7 +777,10 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
 
         NSString *modifiedPayload = [self prepareStringFromNotificationPayload:response andUserInfo:response.notification.request.content.userInfo];
         NSLog(@"modifiedPayload - %@", modifiedPayload);
-        _eventSink(modifiedPayload);
+        
+        if ((_eventSink != NULL) || (_eventSink != nil)){
+            _eventSink(modifiedPayload);
+        }
 
         NSString *payload = (NSString *) response.notification.request.content.userInfo[PAYLOAD];
         if(_initialized) {
@@ -828,7 +835,7 @@ didReceiveLocalNotification:(UILocalNotification*)notification {
 
     NSMutableDictionary *updatedPayload = [NSMutableDictionary new];
 
-    if (response == nil) {
+    if ((response == nil) || (response == (id)[NSNull null])) {
         updatedPayload[@"appState"] = @"foreground";
     } else {
         updatedPayload[@"appState"] = @"notificaiotn_click_or_by_app_launch";
