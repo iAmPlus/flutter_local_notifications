@@ -32,7 +32,7 @@ typedef NotificationTriggerListener = void Function(dynamic msg);
 class FlutterLocalNotificationsPlugin {
   /// Factory for create an instance of [FlutterLocalNotificationsPlugin].
   factory FlutterLocalNotificationsPlugin() => _instance;
-  static void onAlarmTriggerSubscription(
+  static void onNotificationTriggerSubscription(
       NotificationTriggerListener alarmTriggerListener) {
     print('event channel called = $_connectedStream $alarmTriggerListener');
     _connectedStream
