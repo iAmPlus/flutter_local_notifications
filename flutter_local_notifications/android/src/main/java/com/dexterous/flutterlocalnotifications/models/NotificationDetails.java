@@ -177,7 +177,7 @@ public class NotificationDetails implements Serializable {
     public String shortcutId;
     public String subText;
     public String tag;
-    public String appState;
+    public String appState = "background";
 
 
 
