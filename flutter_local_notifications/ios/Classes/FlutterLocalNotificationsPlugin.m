@@ -855,7 +855,6 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 - (BOOL)isAFlutterLocalNotification:(NSDictionary *)userInfo {
-<<<<<<< HEAD
   return userInfo != nil && userInfo[NOTIFICATION_ID] &&
          userInfo[PRESENT_ALERT] && userInfo[PRESENT_SOUND] &&
          userInfo[PRESENT_BADGE] && userInfo[PAYLOAD];
@@ -863,16 +862,6 @@ static FlutterError *getFlutterError(NSError *error) {
 
 - (void)handleSelectNotification:(NSString *)payload {
   [_channel invokeMethod:@"selectNotification" arguments:payload];
-=======
-
-    return userInfo != nil && userInfo[NOTIFICATION_ID] && userInfo[PRESENT_ALERT] && userInfo[PRESENT_SOUND] && userInfo[PRESENT_BADGE] && userInfo[PAYLOAD];
-}
-
-- (void)handleSelectNotification:(NSString *)payload {
-
-    [_channel invokeMethod:@"selectNotification" arguments:payload];
-
->>>>>>> 5709a92797ecaafe04f38a95b99c4699b8355af9
 }
 
 - (BOOL)containsKey:(NSString *)key forDictionary:(NSDictionary *)dictionary {
@@ -880,7 +869,6 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 #pragma mark - UNUserNotificationCenterDelegate
-<<<<<<< HEAD
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:
@@ -927,60 +915,6 @@ static FlutterError *getFlutterError(NSError *error) {
     } else {
       _launchPayload = payload;
       _launchingAppFromNotification = true;
-=======
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification :(UNNotification *)notification withCompletionHandler :(void (^)(UNNotificationPresentationOptions))completionHandler NS_AVAILABLE_IOS(10.0) {
-    if(![self isAFlutterLocalNotification:notification.request.content.userInfo]) {
-        return;
-    }
-
-    NSString *modifiedPayload = [self prepareStringFromNotificationPayload:nil andUserInfo:notification.request.content.userInfo];
-    NSLog(@"modifiedPayload - %@", modifiedPayload);
-    if ((_eventSink != NULL) || (_eventSink != nil)){
-        _eventSink(modifiedPayload);
-    }
-
-   
-
-    UNNotificationPresentationOptions presentationOptions = 0;
-    NSNumber *presentAlertValue = (NSNumber*)notification.request.content.userInfo[PRESENT_ALERT];
-    NSNumber *presentSoundValue = (NSNumber*)notification.request.content.userInfo[PRESENT_SOUND];
-    NSNumber *presentBadgeValue = (NSNumber*)notification.request.content.userInfo[PRESENT_BADGE];
-    bool presentAlert = [presentAlertValue boolValue];
-    bool presentSound = [presentSoundValue boolValue];
-    bool presentBadge = [presentBadgeValue boolValue];
-    if(presentAlert) {
-        presentationOptions |= UNNotificationPresentationOptionAlert;
-    }
-    if(presentSound){
-        presentationOptions |= UNNotificationPresentationOptionSound;
-    }
-    if(presentBadge) {
-        presentationOptions |= UNNotificationPresentationOptionBadge;
-    }
-//    completionHandler(presentationOptions);
-}
-
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center
-didReceiveNotificationResponse:(UNNotificationResponse *)response
-         withCompletionHandler:(void (^)(void))completionHandler NS_AVAILABLE_IOS(10.0) {
-    if ([response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier] && [self isAFlutterLocalNotification:response.notification.request.content.userInfo]) {
-
-        NSString *modifiedPayload = [self prepareStringFromNotificationPayload:response andUserInfo:response.notification.request.content.userInfo];
-        NSLog(@"modifiedPayload - %@", modifiedPayload);
-        
-        if ((_eventSink != NULL) || (_eventSink != nil)){
-            _eventSink(modifiedPayload);
-        }
-
-        NSString *payload = (NSString *) response.notification.request.content.userInfo[PAYLOAD];
-        if(_initialized) {
-            [self handleSelectNotification:payload];
-        } else {
-            _launchPayload = payload;
-            _launchingAppFromNotification = true;
-        }
-        completionHandler();
->>>>>>> 5709a92797ecaafe04f38a95b99c4699b8355af9
     }
     completionHandler();
   }
@@ -988,7 +922,6 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
 
 #pragma mark - AppDelegate
 - (BOOL)application:(UIApplication *)application
-<<<<<<< HEAD
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   if (launchOptions != nil) {
     UILocalNotification *launchNotification =
@@ -1026,41 +959,6 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
     arguments[PAYLOAD] = notification.userInfo[PAYLOAD];
   }
   [_channel invokeMethod:DID_RECEIVE_LOCAL_NOTIFICATION arguments:arguments];
-=======
-didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    if (launchOptions != nil) {
-        UILocalNotification *launchNotification = (UILocalNotification *)[launchOptions objectForKey:UIApplicationLaunchOptionsLocalNotificationKey];
-        _launchingAppFromNotification = launchNotification != nil && [self isAFlutterLocalNotification:launchNotification.userInfo];
-        if(_launchingAppFromNotification) {
-            _launchNotification = launchNotification;
-        }
-    }
-
-    return YES;
-}
-
-- (void)application:(UIApplication*)application
-didReceiveLocalNotification:(UILocalNotification*)notification {
-    if(@available(iOS 10.0, *)) {
-        return;
-    }
-    if(![self isAFlutterLocalNotification:notification.userInfo]) {
-        return;
-    }
-
-    NSMutableDictionary *arguments = [[NSMutableDictionary alloc] init];
-    arguments[ID]= notification.userInfo[NOTIFICATION_ID];
-    if (notification.userInfo[TITLE] != [NSNull null]) {
-        arguments[TITLE] = notification.userInfo[TITLE];
-    }
-    if (notification.alertBody != nil) {
-        arguments[BODY] = notification.alertBody;
-    }
-    if (notification.userInfo[PAYLOAD] != [NSNull null]) {
-        arguments[PAYLOAD] =notification.userInfo[PAYLOAD];
-    }
-    [_channel invokeMethod:DID_RECEIVE_LOCAL_NOTIFICATION arguments:arguments];
->>>>>>> 5709a92797ecaafe04f38a95b99c4699b8355af9
 }
 
 // This method will inject the appstate whether it is foreground or in backgound
