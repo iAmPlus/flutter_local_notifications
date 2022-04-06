@@ -428,10 +428,6 @@ static FlutterError *getFlutterError(NSError *error) {
         [self buildStandardUILocalNotification:arguments];
     NSString *scheduledDateTime = arguments[SCHEDULED_DATE_TIME];
     NSString *timeZoneName = arguments[TIME_ZONE_NAME];
-<<<<<<< HEAD
-=======
-
->>>>>>> 5709a92797ecaafe04f38a95b99c4699b8355af9
     NSNumber *matchDateComponents = arguments[MATCH_DATE_TIME_COMPONENTS];
     NSNumber *uiLocalNotificationDateInterpretation =
         arguments[UILOCALNOTIFICATION_DATE_INTERPRETATION];
